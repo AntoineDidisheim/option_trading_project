@@ -13,6 +13,7 @@ class Data:
 
     def load_all(self, reload = False):
         self.opt = self.load_opt(reload)
+        self.prc = self.load_all_price(reload)
 
     def opt_clean_year(self, year):
         df = pd.read_pickle(self.par.data.dir+f'raw/opt_{year}.p')
@@ -44,6 +45,32 @@ class Data:
 
         return df
 
+    def load_all_price(self, reload=False):
+        if reload:
+            L = [x for x in os.listdir(self.par.data.dir + 'raw') if 'price_' in x]
+            df = []
+            for l in L:
+                df.append(pd.read_pickle(self.par.data.dir + 'raw/' + l))
+            df = pd.concat(df)
+            df.columns = [x.lower() for x in df.columns]
+            del df['gv_key']
+            df = df.rename(columns={'gv_key': 'gvkey', 'adjustment_factor_2': 'adj', 's_close': 'S0'})
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values(['stock_key', 'date']).reset_index(drop=True)
+            df['S0'] = df['S0'].abs()
+
+            # df=df.dropna()
+
+            df['stock_key'] = df['stock_key'].astype(int)
+            df.to_pickle(self.par.data.dir + f'merge/price.p')
+        else:
+            df = pd.read_pickle(self.par.data.dir + f'merge/price.p')
+        return df
+
+
+
+
+
     def load_opt(self, reload =False):
         if reload:
             df = None
@@ -60,7 +87,7 @@ class Data:
         return df
 
 
-# par = Params()
-# self = Data(par)
-# year = 2000
+par = Params()
+self = Data(par)
+year = 2000
 
