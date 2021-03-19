@@ -42,8 +42,8 @@ class DataParams:
         else:
             self.dir = 'data/'
 
-        self.start_year = 2000
-        self.end_year = 2005
+        self.start_year = 2010
+        self.end_year = 2020
 
 
 

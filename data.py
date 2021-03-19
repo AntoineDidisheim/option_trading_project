@@ -14,6 +14,21 @@ class Data:
     def load_all(self, reload = False):
         self.opt = self.load_opt(reload)
         self.prc = self.load_all_price(reload)
+        self.opt = self.opt.merge(self.prc[['date', 'stock_key', 'S0']].rename(columns={'date': 'expiration', 'S0': 'S_T'}))
+
+        ##################
+        # add return and cash
+        ##################
+
+        ind = self.opt['cp'] == 'C'
+        self.opt.loc[ind, 'cash'] = self.opt.loc[ind, 'S_T'] - self.opt.loc[ind, 'strike']
+        ind = self.opt['cp'] == 'P'
+        self.opt.loc[ind, 'cash'] = self.opt.loc[ind, 'strike'] - self.opt.loc[ind, 'S_T']
+        self.opt.loc[(self.opt['cash'] < 0), 'cash'] = 0
+
+        self.opt['ret'] = self.opt['cash'] / self.opt['ask']
+
+
 
     def opt_clean_year(self, year):
         df = pd.read_pickle(self.par.data.dir+f'raw/opt_{year}.p')
@@ -25,7 +40,7 @@ class Data:
         df.columns= [x.lower() for x in df.columns]
         df['date'] = pd.to_datetime(df['date'])
         df['expiration'] = pd.to_datetime(df['expiration'])
-        del df['gv_key'], df['total_volume'], df['total_open_interest'],df['dw']
+        del df['gv_key'],df['dw']
 
         df = df.rename(columns={'s_close':'S', 'adjustment_factor_2':'adj','shares_outstanding':'share',
                                 'implied_volatility':'iv','best_offer':'ask','best_bid':'bid','call_put':'cp',
@@ -43,6 +58,8 @@ class Data:
 
         df['strike'] /= 1000
 
+
+
         return df
 
     def load_all_price(self, reload=False):
@@ -53,7 +70,7 @@ class Data:
                 df.append(pd.read_pickle(self.par.data.dir + 'raw/' + l))
             df = pd.concat(df)
             df.columns = [x.lower() for x in df.columns]
-            del df['gv_key']
+            del df['gv_key'], df['comnam'],df['permno'],df['gvkey'],df['datadate'],df['ibc'],df['yy'],df['cusip']
             df = df.rename(columns={'gv_key': 'gvkey', 'adjustment_factor_2': 'adj', 's_close': 'S0'})
             df['date'] = pd.to_datetime(df['date'])
             df = df.sort_values(['stock_key', 'date']).reset_index(drop=True)
@@ -89,5 +106,5 @@ class Data:
 
 par = Params()
 self = Data(par)
-year = 2000
+year = 2001
 
